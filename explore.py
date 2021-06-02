@@ -13,11 +13,6 @@ import simpleaudio as sa
 import wave
 from wavinfo import WavInfoReader
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
-
-
-
 
 class SubsetSC(SPEECHCOMMANDS):
     def __init__(self, subset: str = None):
@@ -37,31 +32,34 @@ class SubsetSC(SPEECHCOMMANDS):
             excludes = set(excludes)
             self._walker = [w for w in self._walker if w not in excludes]
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
+
 
 # Create training and testing split of the data. We do not use validation in this tutorial.
 train_set = SubsetSC("training")
 test_set = SubsetSC("testing")
+validation_set = SubsetSC("validation")
+dev_set = validation_set
 
-waveform, sample_rate, label, speaker_id, utterance_number = train_set[0]
 
-print("Shape of waveform: {}".format(waveform.size()))
-print("Sample rate of waveform: {}".format(sample_rate))
+# for train_data in train_set:
+#     waveform, sample_rate, label, speaker_id, utterance_number = train_data
+#     print("Shape of waveform: {}".format(waveform.size()))
+#     print("Sample Rate: {}".format(sample_rate))
 
-plt.plot(waveform.t().numpy());
-plt.show()
+class MyNet(nn.Module):
+    def __init__(self):
+        super(MyNet, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(16000, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32)
+        )
 
-waveform_first, *_ = train_set[0]
-print(sample_rate)
-print(waveform_first.numpy())
-wavedata = waveform_first.numpy()
-#playsound(waveform_first.numpy())
-# wave_read = wave.open("welcome.wav", 'rb')
-# wave_obj = sa.WaveObject.from_wave_read(wave_read)
-# play_obj = wave_obj.play()
-# play_obj.wait_done()
+    def forward(self, x):
+        x = self.net(x)
+        return F.log_softmax(x, dim=1)
 
-sa.play_buffer(wavedata,1,4,sample_rate)
-
-path = 'SpeechCommands/speech_commands_v0.02/backward/0a2b400e_nohash_0.wav'
-info = WavInfoReader(path)
-print(info)
